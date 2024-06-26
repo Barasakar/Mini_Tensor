@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClInclude Include="MatrixOperations_T.cuh" />
     <ClInclude Include="MiniTensor_T.h" />
+    <ClInclude Include="utils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

@@ -3,8 +3,7 @@
 #ifndef MINI_TENSOR_MATRIXOPERATIONS_CUH
 #define MINI_TENSOR_MATRIXOPERATIONS_CUH
 
-#include <cuda_runtime.h>
-
+#include "utils.h"
 
 template<typename T = int> __global__ void kernel_matrixAdd(T* input_1, T* input_2, T* output, long long total_size) {
 	int thread_id = blockId.x * blockDim.x + threadIdx.x;
@@ -44,19 +43,19 @@ MatrixOperations<T>::MatrixOperations(long long rows, long long cols) {
 	this->rows = rows;
 	this->cols = cols;
 	total_size = rows * cols;
-
+	
 	// Allocate memory on device
-	cudaMalloc((void**)&d_input_1, total_size * sizeof(T));
-	cudaMalloc((void**)&d_input_2, total_size * sizeof(T));
-	cudaMalloc((void**)&d_output, total_size * sizeof(T));
+	cudaCheckError(cudaMalloc((void**)&d_input_1, total_size * sizeof(T)));
+	cudaCheckError(cudaMalloc((void**)&d_input_2, total_size * sizeof(T)));
+	cudaCheckError(cudaMalloc((void**)&d_output, total_size * sizeof(T)));
 
 }
 
 template <typename T>
 MatrixOperations<T>::~MatrixOperations() {
-	cudaFree(d_input_1);
-	cudaFree(d_input_2);
-	cudaFree(d_output);
+	cudaCheckError(cudaFree(d_input_1));
+	cudaCheckError(cudaFree(d_input_2));
+	cudaCheckError(cudaFree(d_output));
 }
 
 #endif 
