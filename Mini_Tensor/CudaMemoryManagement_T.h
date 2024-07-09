@@ -7,7 +7,7 @@
 template <typename T>
 class CudaMemoryManagement {
 public:
-	CudaMemoryManagement(size_t size) : size_(size), ptr(nullptr) {
+	CudaMemoryManagement(size_t size) : size_(size), ptr_(nullptr) {
 		cudaCheckError(cudaMalloc(&ptr_, size_ * sizeof(T)));
 	}
 	~CudaMemoryManagement() {
