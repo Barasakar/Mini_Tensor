@@ -44,6 +44,7 @@ public:
 			other.ptr_ = nullptr;
 			other.size_ = 0;
 		}
+		return *this;
 	}
 
 private:
