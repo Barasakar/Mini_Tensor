@@ -4,11 +4,12 @@
 #define MINI_TENSOR_MATRIXOPERATIONS_CUH
 
 #include "utils.h"
+#include "CudaMemoryManagement_T.h"
 
-template<typename T> __global__ void kernel_matrixAdd(T* input_1, T* input_2, T* output, long long total_size) {
-	int thread_id = blockId.x * blockDim.x + threadIdx.x;
+template<typename T> __global__ void kernel_matrixAdd(T* d_input_1, T* d_input_2, T* d_output, long long total_size) {
+	int thread_id = blockId.x * blockDim.x + threadId.x;
 	if (thread_id < total_size) {
-		output[thread_id] = input_1[thread_id] + input_2[thread_id];
+		d_output[thread_id] = d_input_1[thread_id] + d_input_2[thread_id];
 	}
 }
 
@@ -19,9 +20,8 @@ template<typename T> __global__ void kernel_matrixAdd(T* input_1, T* input_2, T*
 /// <typeparam name="T"> Any data type. </typeparam>
 template <typename T> class MatrixOperations {
 public:
-	MatrixOperations();
 	MatrixOperations(long long rows, long long cols);
-	~MatrixOperations();
+	~MatrixOperations() = default;
 
 	void add(T* input_1, T* input_2, T* output);
 
@@ -29,40 +29,15 @@ private:
 	long long rows;
 	long long cols;
 	long long total_size;
-	T* d_input_1;
-	T* d_input_2;
-	T* d_output;
+	CudaMemoryManagement<T> d_input_1;
+	CudaMemoryManagement<T> d_input_2;
+	CudaMemoryManagement<T> d_output;
 };
 
-template <typename T> 
-MatrixOperations<T>::MatrixOperations() {
-	rows = 0;
-	cols = 0;
-	total_size = 0;
-	d_input_1 = nullptr;
-	d_input_2 = nullptr;
-	d_output = nullptr;
-}
 
 template <typename T>
-MatrixOperations<T>::MatrixOperations(long long rows, long long cols) {
-	this->rows = rows;
-	this->cols = cols;
-	total_size = rows * cols;
-	
-	// Allocate memory on device
-	cudaCheckError(cudaMalloc((void**)&d_input_1, total_size * sizeof(T)));
-	cudaCheckError(cudaMalloc((void**)&d_input_2, total_size * sizeof(T)));
-	cudaCheckError(cudaMalloc((void**)&d_output, total_size * sizeof(T)));
-
-}
-
-template <typename T>
-MatrixOperations<T>::~MatrixOperations() {
-	cudaCheckError(cudaFree(d_input_1));
-	cudaCheckError(cudaFree(d_input_2));
-	cudaCheckError(cudaFree(d_output));
-}
+MatrixOperations<T>::MatrixOperations(long long rows, long long cols) : rows(rows), cols(cols), total_size(rows * cols), 
+d_input_1(total_size), d_input_2(total_size), d_output(total_size){}
 
 /// <summary>
 /// Perform matrix addition given two inputs.
@@ -72,6 +47,16 @@ MatrixOperations<T>::~MatrixOperations() {
 /// <param name="output">  output from host memory. </param>
 template <typename T>
 void MatrixOperations<T>::add(T* input_1, T* input_2, T* output) {
+	cudaCheckError(cudaMemcpy(d_input_1.getPtr(), input_1, total_size * sizeof(T), cudaMemcpyHostToDevice));
+	cudaCheckError(cudaMemcpy(d_input_2.getPtr(), input_2, total_size * sizeof(T), cudaMemcpyHostToDevice));
+
+	kernel_matrixAdd<T> << <(total_size + 255) / 256, 256 >> > (d_input_1.getPtr(), d_input_2.getPtr(), d_output.getPtr(), total_size);
+	
+	cudaCheckError(cudaPeekAtLastError()); 
+	cudaCheckError(cudaDeviceSynchronize()); 
+
+	
+	cudaCheckError(cudaMemcpy(output, d_output.getPtr(), total_size * sizeof(T), cudaMemcpyDeviceToHost));
 
 }
 
