@@ -28,7 +28,23 @@ public:
 	CudaMemoryManagement(const CudaMemoryManagement&) = delete;
 	CudaMemoryManagement& operator=(const CudaMemoryManagement&) = delete;
 
-	
+	//Move constructor and assignment operator
+	CudaMemoryManagement(CudaMemoryManagement&& other) noexcept : size_(other.size_), ptr_(other.ptr_) {
+		other.ptr_ = nullptr;
+		other.size_ = 0;
+	}
+	CudaMemoryManagement& operator=(CudaMemoryManagement&& other) noexcept {
+		if (this != &other) {
+			if (ptr_) { //used ptr_ instead of other.ptr_ because we want to check if this.ptr_ has any ownership or not.
+				cudaCheckError(cudaFree(ptr_));
+			}
+			// Update and nullify:
+			ptr_ = other.ptr_;
+			size_ = other.size_;
+			other.ptr_ = nullptr;
+			other.size_ = 0;
+		}
+	}
 
 private:
 	size_t size_;
