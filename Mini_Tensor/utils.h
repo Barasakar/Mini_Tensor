@@ -11,9 +11,10 @@
 	do { \
 		cudaError error = call; \
 		if (error != cudaSuccess) { \
-			std::string msg = "CUDA Error: " + cudaGetErrorString(error) + \
-			" in file " +  __FILE__ + " at line " + __LINE__ ; \
+			std::string msg = "CUDA Error: " + std::string(cudaGetErrorString(error)) + \
+			" in file " +  __FILE__ + " at line " + std::to_string(__LINE__) ; \
 			throw CudaException(msg, error); \
 		} \
 	} while(0) 
 #endif
+

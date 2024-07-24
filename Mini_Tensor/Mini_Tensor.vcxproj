@@ -20,9 +20,6 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="MatrixOperations_T.cu" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{DBDDEB2D-7C83-4EA7-9554-7E3330EFB0E1}</ProjectGuid>
     <RootNamespace>Mini_Tensor</RootNamespace>
