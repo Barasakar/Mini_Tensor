@@ -7,9 +7,23 @@
 namespace MiniTensor {
 
     template<typename T> __global__ void kernel_matrixAdd(T* d_input_1, T* d_input_2, T* d_output, long long total_size) {
-        int thread_id = blockIdx.x * blockDim.x + threadIdx.x; // Corrected
+        int thread_id = blockIdx.x * blockDim.x + threadIdx.x; 
         if (thread_id < total_size) {
             d_output[thread_id] = d_input_1[thread_id] + d_input_2[thread_id];
+        }
+    }
+
+    //https://siboehm.com/articles/22/CUDA-MMM
+    template<typename T> __global__ void kernel_matrixMult(T* d_input_1, T* d_input_2, T* d_output, 
+        long long rows, long long cols, long long shared_dim, long long total_size) {
+		int x = blockIdx.x * blockDim.x + threadIdx.x;
+		int y = blockIdx.y * blockDim.y + threadIdx.y;
+        if (x < cols && y < rows) {
+			T tmp_sum = 0.0;
+            for (int i = 0; i < shared_dim; i++) {
+                tmp_sum += d_input_1[y * shared_dim + i] * d_input_2[i * cols + x];
+            }
+			d_output[y * cols + x] = tmp_sum;
         }
     }
 
@@ -25,6 +39,7 @@ namespace MiniTensor {
         ~MatrixOperations() = default;
 
         void add(T* input_1, T* input_2, T* output);
+		void multiply(T* input_1, T* input_2, T* output, long long cols, long long rows, long long shared_dim);
 
     private:
         long long rows;
@@ -58,6 +73,25 @@ namespace MiniTensor {
             throw;
         }
     }
+
+	template <typename T>
+	void MatrixOperations<T>::multiply(T* input_1, T* input_2, T* output, long long cols, long long rows, long long shared_dim) {
+        try {
+			cudaCheckError(cudaMemcpy(d_input_1.getPtr(), input_1, total_size * sizeof(T), cudaMemcpyHostToDevice));
+			cudaCheckError(cudaMemcpy(d_input_2.getPtr(), input_2, total_size * sizeof(T), cudaMemcpyHostToDevice));
+
+			kernel_matrixMult<T> << <(total_size + 255) / 256, 256 >> > (d_input_1.getPtr(), d_input_2.getPtr(), d_output.getPtr(), rows, cols, shared_dim, total_size);
+
+			cudaCheckError(cudaPeekAtLastError());
+			cudaCheckError(cudaDeviceSynchronize());
+
+			cudaCheckError(cudaMemcpy(output, d_output.getPtr(), total_size * sizeof(T), cudaMemcpyDeviceToHost));
+		}
+        catch (const CudaException& e) {
+			std::cerr << "MatrixOperations::multiply failed: " << e.what() << std::endl;
+			throw;
+		}
+	}
 
 } // namespace MiniTensor
 
